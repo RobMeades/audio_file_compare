@@ -17,15 +17,15 @@ static void printUsage(char *pExeName) {
     printf("\n%s: take two mono binary audio files containing PCM audio data of a given word-width/endianness and\n", pExeName);
     printf("produce a single stereo PCM audio data file so that the two mono files can be compared side by side in an application\n");
     printf("such as Audacity.  Usage:\n");
-    printf("  %s input_file_left endianness word_width input_file_right endianness word_width output_file\n", pExeName);
+    printf("  %s input_file_left word_width endianness input_file_right word_width endianness output_file\n", pExeName);
     printf("where:\n");
     printf("  input_file_left is the name of the PCM input file that will form the left channel,\n");
     printf("  input_file_right is the name of the PCM input file that will form the right channel,\n");
-    printf("  endianness is the endianness of the given file, b for big, l for little,\n");
     printf("  word_width is the number of bytes per word for the given file, 1 to 4,\n");
-    printf("  output_file is the filename to use for the stereo output (any existing file will be overwritten),\n");
+    printf("  endianness is the endianness of the given file, b for big, l for little,\n");
+    printf("  output_file is the filename to use for the stereo output (l 4) (any existing file will be overwritten),\n");
     printf("For example:\n");
-    printf("  %s afile l 4 anotherfile b 2 out\n\n", pExeName);
+    printf("  %s afile 4 l anotherfile 2 b out\n\n", pExeName);
 }
 
 // Convert endianness of array
@@ -134,19 +134,19 @@ int main(int argc, char* argv[])
                 pInputFileNameLeft = argv[x];
             break;
             case 2:
-                pEndiannessLeft = argv[x];
+                wordWidthLeft = atoi(argv[x]);
             break;
             case 3:
-                wordWidthLeft = atoi(argv[x]);
+                pEndiannessLeft = argv[x];
             break;
             case 4:
                 pInputFileNameRight = argv[x];
             break;
             case 5:
-                pEndiannessRight = argv[x];
+                wordWidthRight = atoi(argv[x]);
             break;
             case 6:
-                wordWidthRight = atoi(argv[x]);
+                pEndiannessRight = argv[x];
             break;
             case 7:
                 pOutputFileName = argv[x];
@@ -157,13 +157,18 @@ int main(int argc, char* argv[])
 
     // Must have all of the command-line parameters
     if ((pInputFileNameLeft != NULL) &&
-        (pEndiannessLeft != NULL) &&
         (wordWidthLeft > 0) &&
+        (pEndiannessLeft != NULL) &&
         (pInputFileNameRight != NULL) &&
-        (pEndiannessRight != NULL) &&
         (wordWidthRight > 0) &&
+        (pEndiannessRight != NULL) &&
         (pOutputFileName != NULL)) {
         success = true;
+        // Check that the word width makes sense
+        if ((wordWidthLeft > 4) && (wordWidthRight > 4)) {
+            success = false;
+            printf("Word width must be 1, 2, 3, or 4.\n");
+        }
         // Check that endianness makes sense
         if (((strlen (pEndiannessLeft) != 1) ||
              ((*pEndiannessLeft != 'l') &&
@@ -174,11 +179,6 @@ int main(int argc, char* argv[])
             success = false;
             printf("Endianness must be l for little or b for big.\n");
         }
-        // Check that the word width makes sense
-        if ((wordWidthLeft > 4) && (wordWidthRight > 4)) {
-            success = false;
-            printf("Word width must be 1, 2, 3, or 4.\n");
-        }
         // Open the left input file
         pInputFileLeft = fopen (pInputFileNameLeft, "rb");
         if (pInputFileLeft == NULL) {
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
         }
         // Open the right input file
         pInputFileRight = fopen (pInputFileNameRight, "rb");
-        if (pInputFileLeft == NULL) {
+        if (pInputFileRight == NULL) {
             success = false;
             printf("Cannot open right channel input file %s (%s).\n", pInputFileNameRight, strerror(errno));
         }
@@ -198,13 +198,14 @@ int main(int argc, char* argv[])
             printf("Cannot open output file %s (%s).\n", pOutputFileName, strerror(errno));
         }
         if (success) {
-            printf("Parsing mono left channel file %s (%s endian with %d byte words) and mono right channel\n",
-                   pInputFileNameLeft, *pEndiannessLeft == 'l' ? "little" : "big", wordWidthLeft);
-            printf("file %s (%s endian with %d byte words) and writing stereo output to file %s.\n",
-                   pInputFileNameRight, *pEndiannessRight == 'l' ? "little" : "big", wordWidthRight,
+            printf("Parsing mono left channel file %s (%d byte words %s endian) and mono right channel\n",
+                   pInputFileNameLeft, wordWidthLeft, *pEndiannessLeft == 'l' ? "little" : "big");
+            printf("file %s (%d byte words %s endian) and writing stereo output to file %s\n",
+                   pInputFileNameRight, wordWidthRight, *pEndiannessRight == 'l' ? "little" : "big",
                    pOutputFileName);                   
-            x = parse(pInputFileLeft, *pEndiannessLeft == 'l' ? true : false, wordWidthLeft,
-                      pInputFileRight, *pEndiannessRight == 'l' ? true : false, wordWidthRight,
+            printf("(4 byte words little endian).\n");
+            x = parse(pInputFileLeft, wordWidthLeft, *pEndiannessLeft == 'l' ? true : false, 
+                      pInputFileRight, wordWidthRight, *pEndiannessRight == 'l' ? true : false,
                       pOutputFile);
             printf("Done: %d item(s) written to file.\n", x);
         } else {

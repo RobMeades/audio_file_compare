@@ -25,7 +25,7 @@ static void printUsage(char *pExeName) {
     printf("  endianness is the endianness of the given file, b for big, l for little,\n");
     printf("  output_file is the filename to use for the stereo output (l 4) (any existing file will be overwritten),\n");
     printf("For example:\n");
-    printf("  %s afile 4 l anotherfile 2 b out\n\n", pExeName);
+    printf("  %s afile.pcm 4 l anotherfile.pcm 2 b stereo.pcm\n\n", pExeName);
 }
 
 // Convert endianness of array
